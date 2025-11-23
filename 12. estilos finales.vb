@@ -66,4 +66,38 @@ function main(workbook: ExcelScript.Workbook) {
 
 	rangoTotalNL.getFormat().getFill().setColor(colorAzul);
 	rangoTotalNL.getFormat().getFont().setBold(true);
+
+	// ==========================================
+	// 4. FORMATO GRAN TOTAL (NUEVO)
+	// ==========================================
+	// Buscamos la fila del "Total general" final.
+	// Sabemos que está después de la tabla de No Laborables.
+	// Una forma segura es buscar la última celda usada en la columna A.
+	
+	let ultimaCeldaA = selectedSheet.getRange("A:A").getUsedRange().getLastRow().getCell(0, 0);
+	
+	// Verificamos si es "Total general" para estar seguros
+	if (ultimaCeldaA.getValue() === "Total general") {
+		let rangoGranTotal = ultimaCeldaA.getExtendedRange(ExcelScript.KeyboardDirection.right);
+		
+		// 1. Color y Negrita
+		rangoGranTotal.getFormat().getFill().setColor(colorAzul);
+		rangoGranTotal.getFormat().getFont().setBold(true);
+		
+		// 2. Alineación Centrada
+		rangoGranTotal.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+		rangoGranTotal.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
+
+		// 3. Bordes Completos (Caja y divisiones internas)
+		let formatoGT = rangoGranTotal.getFormat();
+		
+		// Bordes externos
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
+		
+		// Bordes internos verticales (para separar columnas)
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
+	}
 }

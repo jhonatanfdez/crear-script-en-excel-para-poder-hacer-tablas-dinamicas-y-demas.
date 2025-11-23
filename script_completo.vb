@@ -35,8 +35,11 @@ function main(workbook: ExcelScript.Workbook) {
     // 10. Ajustes finales de columnas y filas (Parte 2)
     step10_Ajustes2(workbook);
 
-    // 11. Aplicar estilos finales (Negrita y Azul)
-    step11_EstilosFinales(workbook);
+    // 11. Generar Gran Total (Sumatoria de las 3 tablas)
+    step11_GenerarGranTotal(workbook);
+
+    // 12. Aplicar estilos finales (Negrita y Azul)
+    step12_EstilosFinales(workbook);
 }
 
 // ==========================================================================
@@ -776,14 +779,80 @@ function step10_Ajustes2(workbook: ExcelScript.Workbook) {
 }
 
 // ==========================================================================
-// 11. ESTILOS FINALES (AZUL Y NEGRITA)
+// 11. GENERAR GRAN TOTAL
+// ==========================================================================
+/**
+ * SCRIPT: Generación de Gran Total
+ * OBJETIVO: Calcular y agregar una fila final de "Total general" que sume los totales de las 3 tablas anteriores.
+ * UBICACIÓN: Se coloca 2 filas debajo de la tabla de "Horas No Laborables".
+ */
+function step11_GenerarGranTotal(workbook: ExcelScript.Workbook) {
+    let sheet = workbook.getWorksheet("Para compartir");
+    if (!sheet) return;
+
+    // ==========================================
+    // 1. OBTENER RANGOS DE LAS 3 TABLAS
+    // ==========================================
+    // Usamos getSurroundingRegion para detectar dinámicamente el tamaño de cada tabla
+    let rangoProy = sheet.getRange("A6").getSurroundingRegion();
+    let rangoAdmin = sheet.getRange("A26").getSurroundingRegion();
+    let rangoNL = sheet.getRange("A36").getSurroundingRegion();
+
+    // ==========================================
+    // 2. IDENTIFICAR FILAS DE TOTALES INDIVIDUALES
+    // ==========================================
+    // La fila de totales es la última fila de cada región detectada
+    let filaTotalProy = rangoProy.getLastRow();
+    let filaTotalAdmin = rangoAdmin.getLastRow();
+    let filaTotalNL = rangoNL.getLastRow();
+
+    // ==========================================
+    // 3. DETERMINAR POSICIÓN DEL GRAN TOTAL
+    // ==========================================
+    // Calculamos dónde debe ir la nueva fila:
+    // Índice de inicio de la última tabla + número de filas = índice de la primera fila vacía
+    let indexUltimaFilaTablaNL = rangoNL.getRowIndex() + rangoNL.getRowCount();
+    
+    // Dejamos 1 fila vacía de separación, así que sumamos 1 al índice
+    let filaGranTotalIndex = indexUltimaFilaTablaNL + 1;
+
+    // ==========================================
+    // 4. ESCRIBIR ETIQUETA
+    // ==========================================
+    // Escribimos "Total general" en la columna A de la nueva fila
+    sheet.getRangeByIndexes(filaGranTotalIndex, 0, 1, 1).setValue("Total general");
+
+    // ==========================================
+    // 5. CALCULAR SUMAS POR COLUMNA
+    // ==========================================
+    // Asumimos que las 3 tablas tienen la misma estructura de columnas (mismos recursos en mismo orden)
+    let columnCount = rangoProy.getColumnCount();
+
+    // Iteramos desde la columna 1 (B) hasta la última columna de datos
+    // La columna 0 es la de etiquetas ("Total general"), por eso empezamos en 1
+    for (let col = 1; col < columnCount; col++) {
+        // Obtenemos los valores de las celdas de totales de cada tabla
+        let valProy = filaTotalProy.getCell(0, col).getValue() as number;
+        let valAdmin = filaTotalAdmin.getCell(0, col).getValue() as number;
+        let valNL = filaTotalNL.getCell(0, col).getValue() as number;
+
+        // Sumamos los valores, tratando nulos/undefined como 0
+        let suma = (valProy || 0) + (valAdmin || 0) + (valNL || 0);
+
+        // Escribimos el resultado en la fila del Gran Total
+        sheet.getRangeByIndexes(filaGranTotalIndex, col, 1, 1).setValue(suma);
+    }
+}
+
+// ==========================================================================
+// 12. ESTILOS FINALES (AZUL Y NEGRITA)
 // ==========================================================================
 /**
  * SCRIPT: Aplicar Estilos de Encabezados y Totales
  * OBJETIVO: Aplicar negrita y color de fondo azul (#C0E6F5) a los encabezados y filas de totales.
  * ALCANCE: Hoja "Para compartir", rangos de encabezados y filas finales de tablas.
  */
-function step11_EstilosFinales(workbook: ExcelScript.Workbook) {
+function step12_EstilosFinales(workbook: ExcelScript.Workbook) {
 	// ==========================================
 	// 1. REFERENCIA A LA HOJA
 	// ==========================================
@@ -846,4 +915,38 @@ function step11_EstilosFinales(workbook: ExcelScript.Workbook) {
 
 	rangoTotalNL.getFormat().getFill().setColor(colorAzul);
 	rangoTotalNL.getFormat().getFont().setBold(true);
+
+    // ==========================================
+	// 4. FORMATO GRAN TOTAL (NUEVO)
+	// ==========================================
+	// Buscamos la fila del "Total general" final.
+	// Sabemos que está después de la tabla de No Laborables.
+	// Una forma segura es buscar la última celda usada en la columna A.
+	
+	let ultimaCeldaA = selectedSheet.getRange("A:A").getUsedRange().getLastRow().getCell(0, 0);
+	
+	// Verificamos si es "Total general" para estar seguros
+	if (ultimaCeldaA.getValue() === "Total general") {
+		let rangoGranTotal = ultimaCeldaA.getExtendedRange(ExcelScript.KeyboardDirection.right);
+		
+		// 1. Color y Negrita
+		rangoGranTotal.getFormat().getFill().setColor(colorAzul);
+		rangoGranTotal.getFormat().getFont().setBold(true);
+		
+		// 2. Alineación Centrada
+		rangoGranTotal.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+		rangoGranTotal.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
+
+		// 3. Bordes Completos (Caja y divisiones internas)
+		let formatoGT = rangoGranTotal.getFormat();
+		
+		// Bordes externos
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
+		
+		// Bordes internos verticales (para separar columnas)
+		formatoGT.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
+	}
 }
