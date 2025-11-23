@@ -13,9 +13,12 @@ function main(workbook: ExcelScript.Workbook) {
 	let para_compartir = workbook.getWorksheet("Para compartir");
 	let horas_Admin = workbook.getWorksheet("Horas Admin");
 
+	// Identifica el rango completo de la tabla dinámica automáticamente
+	let rangoOrigen = horas_Admin.getRange("A3").getSurroundingRegion();
+
 	// Copia los datos de horas administrativas a la hoja de presentación
 	para_compartir.getRange("A26").copyFrom(
-		horas_Admin.getRange("A3:G11"), 
+		rangoOrigen, 
 		ExcelScript.RangeCopyType.values, 
 		false, 
 		false

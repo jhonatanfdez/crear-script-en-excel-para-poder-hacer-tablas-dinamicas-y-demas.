@@ -24,12 +24,15 @@ function main(workbook: ExcelScript.Workbook) {
 	// 3. COPIADO DE DATOS
 	// ==========================================
 
+	// Identifica el rango completo de la tabla dinámica automáticamente
+	let rangoOrigen = horas_Proyectos.getRange("A3").getSurroundingRegion();
+
 	// Copia los valores de la tabla dinámica de proyectos
-	// Origen: A3:G21 de "Horas Proyectos"
+	// Origen: Rango dinámico de "Horas Proyectos"
 	// Destino: A6 de "Para compartir"
 	// Solo copia valores (sin formato de tabla dinámica)
 	para_compartir.getRange("A6").copyFrom(
-		horas_Proyectos.getRange("A3:G21"), 
+		rangoOrigen, 
 		ExcelScript.RangeCopyType.values, 
 		false, 
 		false

@@ -13,11 +13,15 @@ function main(workbook: ExcelScript.Workbook) {
 	let para_compartir = workbook.getWorksheet("Para compartir");
 	let horas_No_Laborables = workbook.getWorksheet("Horas No Laborables");
 
+	// Identifica el rango completo de la tabla dinámica automáticamente
+	// getSurroundingRegion() selecciona todo el bloque de datos contiguos desde A3
+	let rangoOrigen = horas_No_Laborables.getRange("A3").getSurroundingRegion();
+
 	// Copia los datos a la hoja de presentación
-	// Origen: A3:G9 de "Horas No Laborables"
+	// Origen: Rango dinámico de "Horas No Laborables"
 	// Destino: A36 de "Para compartir"
 	para_compartir.getRange("A36").copyFrom(
-		horas_No_Laborables.getRange("A3:G9"), 
+		rangoOrigen, 
 		ExcelScript.RangeCopyType.values, 
 		false, 
 		false
