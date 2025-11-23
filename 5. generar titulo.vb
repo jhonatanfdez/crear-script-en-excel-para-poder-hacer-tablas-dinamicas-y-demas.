@@ -18,9 +18,9 @@ function main(workbook: ExcelScript.Workbook) {
 	// ==========================================
 
 	// Establece los textos del encabezado en el rango A1:A4
-	// Incluye Nombre del Banco, Vicepresidencia, Gerencia y Título del Reporte
+	// Incluye Nombre de la Empresa, Vicepresidencia, Gerencia y Título del Reporte
 	para_compartir.getRange("A1:A4").setValues([
-		["BANCO MULTIPLE ADEMI S.A."],
+		["NOMBRE DE LA EMPRESA S.A."],
 		["Vicepresidencia de Auditoria"],
 		["Gerencia de …"],
 		["Horas del trimestre mes - mes 2025"]

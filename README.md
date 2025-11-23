@@ -1,6 +1,6 @@
 # Automatización de Reporte de Horas - Excel Office Scripts
 
-Este proyecto contiene un conjunto de scripts de Office (TypeScript) diseñados para automatizar la generación del reporte trimestral de horas para el Banco Múltiple Ademi S.A.
+Este proyecto contiene un conjunto de scripts de Office (TypeScript) diseñados para automatizar la generación del reporte trimestral de horas.
 
 ## Descripción
 
@@ -35,7 +35,7 @@ Al ejecutar `script_completo.vb`, el sistema realiza los siguientes pasos secuen
 1.  **Limpieza**: Elimina hojas antiguas ("Para compartir", "Horas Proyectos", etc.).
 2.  **Generación de Tablas**: Crea 3 tablas dinámicas en hojas temporales basadas en "Datos TM+".
 3.  **Filtrado**: Aplica filtros para excluir o incluir categorías específicas (Vacaciones, Feriados, etc.).
-4.  **Maquetación**: Prepara la hoja "Para compartir" con los títulos del Banco.
+4.  **Maquetación**: Prepara la hoja "Para compartir" con los títulos institucionales.
 5.  **Consolidación**: Copia los valores de las tablas dinámicas a la hoja de presentación.
 6.  **Formato**: Aplica bordes, alineaciones y ajusta el ancho de las columnas.
 7.  **Cálculo**: Genera una fila de "Total general" sumando los totales de Proyectos + Admin + No Laborables.
