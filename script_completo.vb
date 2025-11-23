@@ -459,8 +459,10 @@ function step6_GenerarProyectos(workbook: ExcelScript.Workbook) {
 	// 3. COPIADO DE DATOS
 	// ==========================================
 
-	// Identifica el rango completo de la tabla dinámica automáticamente
-	let rangoOrigen = horas_Proyectos.getRange("A3").getSurroundingRegion();
+	// Identifica el rango completo de la tabla dinámica de forma robusta
+	// Usamos el objeto PivotTable para obtener el rango exacto, evitando problemas con celdas vacías intermedias
+	let pivotTable = horas_Proyectos.getPivotTables()[0];
+	let rangoOrigen = pivotTable.getLayout().getRange();
 
 	// Copia los valores de la tabla dinámica de proyectos
 	// Origen: Rango dinámico de "Horas Proyectos"
@@ -491,12 +493,16 @@ function step7_GenerarHorasAdmin(workbook: ExcelScript.Workbook) {
 	let para_compartir = workbook.getWorksheet("Para compartir");
 	let horas_Admin = workbook.getWorksheet("Horas Admin");
 
-	// Identifica el rango completo de la tabla dinámica automáticamente
-	let rangoOrigen = horas_Admin.getRange("A3").getSurroundingRegion();
+	// Identifica el rango completo de la tabla dinámica de forma robusta
+	let pivotTable = horas_Admin.getPivotTables()[0];
+	let rangoOrigen = pivotTable.getLayout().getRange();
 
-	// --- LÓGICA DE POSICIONAMIENTO DINÁMICO ---
-	// Buscamos la última fila usada en "Para compartir" para pegar debajo
-	let lastRow = para_compartir.getUsedRange().getLastRow().getRowIndex();
+	// --- LÓGICA DE POSICIONAMIENTO DINÁMICO ROBUSTA ---
+	// Buscamos la última fila real con datos en la columna A para evitar sobrescribir.
+	// getUsedRange(true) ignora celdas que solo tienen formato pero no valores.
+	let usedRangeA = para_compartir.getRange("A:A").getUsedRange(true);
+	let lastRow = usedRangeA ? usedRangeA.getLastRow().getRowIndex() : 5; // Default seguro si está vacía
+	
 	// Dejamos 1 fila vacía de separación (lastRow + 2)
 	let targetRowIndex = lastRow + 2;
 	
@@ -588,12 +594,15 @@ function step8_GenerarHorasNoLaborables(workbook: ExcelScript.Workbook) {
 	let para_compartir = workbook.getWorksheet("Para compartir");
 	let horas_No_Laborables = workbook.getWorksheet("Horas No Laborables");
 
-	// Identifica el rango completo de la tabla dinámica automáticamente
-	let rangoOrigen = horas_No_Laborables.getRange("A3").getSurroundingRegion();
+	// Identifica el rango completo de la tabla dinámica de forma robusta
+	let pivotTable = horas_No_Laborables.getPivotTables()[0];
+	let rangoOrigen = pivotTable.getLayout().getRange();
 
-	// --- LÓGICA DE POSICIONAMIENTO DINÁMICO ---
-	// Buscamos la última fila usada en "Para compartir" para pegar debajo
-	let lastRow = para_compartir.getUsedRange().getLastRow().getRowIndex();
+	// --- LÓGICA DE POSICIONAMIENTO DINÁMICO ROBUSTA ---
+	// Buscamos la última fila real con datos en la columna A
+	let usedRangeA = para_compartir.getRange("A:A").getUsedRange(true);
+	let lastRow = usedRangeA ? usedRangeA.getLastRow().getRowIndex() : 5;
+
 	// Dejamos 1 fila vacía de separación (lastRow + 2)
 	let targetRowIndex = lastRow + 2;
 	
