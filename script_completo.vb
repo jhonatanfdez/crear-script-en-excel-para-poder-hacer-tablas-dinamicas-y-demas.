@@ -100,11 +100,11 @@ function step1_HorasProyecto(workbook: ExcelScript.Workbook) {
 	// ==========================================
 
 	// Se inserta la tabla dinámica llamada "TablaDinámica11".
-	// - Origen: Hoja 'Datos TM+', rango fijo de A1 a AA884.
+	// - Origen: Rango dinámico desde A1 de 'Datos TM+'.
 	// - Destino: La nueva hoja creada, comenzando en la celda A3.
 	let newPivotTable = workbook.addPivotTable(
 		"TablaDinámica11",
-		hojaDatosOrigen.getRange("A1:AA884"),
+		hojaDatosOrigen.getRange("A1").getSurroundingRegion(),
 		hojaReporte.getRange("A3")
 	);
 
@@ -179,7 +179,7 @@ function step2_HorasAdmin(workbook: ExcelScript.Workbook) {
 	// Crea la tabla dinámica "TablaDinámica12" en la nueva hoja, celda A3
 	let newPivotTable = workbook.addPivotTable(
 		"TablaDinámica12", 
-		datos_TM_.getRange("A1:AA884"), 
+		datos_TM_.getRange("A1").getSurroundingRegion(), 
 		hoja14.getRange("A3")
 	);
 
@@ -245,7 +245,7 @@ function step3_HorasNoLaborables(workbook: ExcelScript.Workbook) {
 	// Crea la tabla dinámica "TablaDinámica14" en la nueva hoja
 	let newPivotTable = workbook.addPivotTable(
 		"TablaDinámica14", 
-		datos_TM_.getRange("A1:AA884"), 
+		datos_TM_.getRange("A1").getSurroundingRegion(), 
 		hoja19.getRange("A3")
 	);
 
@@ -380,20 +380,14 @@ function procesarTablaInteligente(
 
       // Aplicar visibilidad si se encontró el ítem
       if (item) {
-        try {
-          // Optimización: Solo cambiar si es necesario
-          if (item.getVisible() !== debeVerse) {
-            item.setVisible(debeVerse);
-            console.log(`   Ajustado: "${nombreItemDetectado}" -> ${debeVerse}`);
-          }
-        } catch (e) {
-          // Fallback en caso de error de lectura de estado
+        // Optimización: Solo cambiar si es necesario
+        if (item.getVisible() !== debeVerse) {
           item.setVisible(debeVerse);
         }
       }
     }
   }
-  console.log("✅ Proceso completado.");
+  // console.log("✅ Proceso completado."); // Comentado para rendimiento
 }
 
 // ==========================================================================
@@ -487,7 +481,7 @@ function step6_GenerarProyectos(workbook: ExcelScript.Workbook) {
  * SCRIPT: Generación de Sección "Horas Admin"
  * OBJETIVO: Copiar datos administrativos y aplicar formato de bordes y alineación.
  * FUENTE: Hoja "Horas Admin", Rango dinámico desde A3.
- * DESTINO: Hoja "Para compartir", celda A26.
+ * DESTINO: Hoja "Para compartir", posición dinámica después de la tabla anterior.
  */
 function step7_GenerarHorasAdmin(workbook: ExcelScript.Workbook) {
 
@@ -500,8 +494,16 @@ function step7_GenerarHorasAdmin(workbook: ExcelScript.Workbook) {
 	// Identifica el rango completo de la tabla dinámica automáticamente
 	let rangoOrigen = horas_Admin.getRange("A3").getSurroundingRegion();
 
+	// --- LÓGICA DE POSICIONAMIENTO DINÁMICO ---
+	// Buscamos la última fila usada en "Para compartir" para pegar debajo
+	let lastRow = para_compartir.getUsedRange().getLastRow().getRowIndex();
+	// Dejamos 1 fila vacía de separación (lastRow + 2)
+	let targetRowIndex = lastRow + 2;
+	
+	let celdaDestino = para_compartir.getRangeByIndexes(targetRowIndex, 0, 1, 1); // Columna A
+
 	// Copia los datos de horas administrativas a la hoja de presentación
-	para_compartir.getRange("A26").copyFrom(
+	celdaDestino.copyFrom(
 		rangoOrigen, 
 		ExcelScript.RangeCopyType.values, 
 		false, 
@@ -509,83 +511,64 @@ function step7_GenerarHorasAdmin(workbook: ExcelScript.Workbook) {
 	);
 
 	// ==========================================
-	// 2. FORMATO DE BORDES (TABLA SUPERIOR)
+	// 2. FORMATO DE BORDES (TABLA COMPLETA)
 	// ==========================================
 	
-	// Configura los bordes para la celda de encabezado A26
-	let rangoA26 = para_compartir.getRange("A26");
-	let formatoA26 = rangoA26.getFormat();
+	// Usamos las dimensiones del rango origen para asegurar que cubrimos toda la tabla,
+	// incluso si hay celdas vacías que romperían un getExtendedRange.
+	let rowCount = rangoOrigen.getRowCount();
+	let colCount = rangoOrigen.getColumnCount();
+	
+	let rangoCompleto = celdaDestino.getResizedRange(rowCount - 1, colCount - 1);
+	let formatoCompleto = rangoCompleto.getFormat();
 
 	// Limpia diagonales
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.diagonalDown).setStyle(ExcelScript.BorderLineStyle.none);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.diagonalUp).setStyle(ExcelScript.BorderLineStyle.none);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.diagonalDown).setStyle(ExcelScript.BorderLineStyle.none);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.diagonalUp).setStyle(ExcelScript.BorderLineStyle.none);
 
-	// Aplica bordes externos e internos finos
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setWeight(ExcelScript.BorderWeight.thin);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setWeight(ExcelScript.BorderWeight.thin);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setWeight(ExcelScript.BorderWeight.thin);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setWeight(ExcelScript.BorderWeight.thin);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setWeight(ExcelScript.BorderWeight.thin);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoA26.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setWeight(ExcelScript.BorderWeight.thin);
+	// Aplica bordes externos e internos finos a TODO el rango
+	let borderStyle = ExcelScript.BorderLineStyle.continuous;
+	let borderWeight = ExcelScript.BorderWeight.thin;
 
-	// ==========================================
-	// 3. FORMATO DE BORDES (CUERPO DE LA TABLA)
-	// ==========================================
-
-	// Extiende la selección desde A7 hacia abajo y derecha para aplicar bordes al bloque principal
-	let rangoCuerpo = para_compartir.getRange("A7").getExtendedRange(ExcelScript.KeyboardDirection.down).getExtendedRange(ExcelScript.KeyboardDirection.right);
-	let formatoCuerpo = rangoCuerpo.getFormat();
-
-	// Limpia diagonales del cuerpo
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.diagonalDown).setStyle(ExcelScript.BorderLineStyle.none);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.diagonalUp).setStyle(ExcelScript.BorderLineStyle.none);
-
-	// Aplica bordes completos al cuerpo
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpo.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setWeight(ExcelScript.BorderWeight.thin);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(borderStyle);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setWeight(borderWeight);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(borderStyle);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setWeight(borderWeight);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(borderStyle);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setWeight(borderWeight);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(borderStyle);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setWeight(borderWeight);
+	
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(borderStyle);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setWeight(borderWeight);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setStyle(borderStyle);
+	formatoCompleto.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setWeight(borderWeight);
 
 	// ==========================================
 	// 4. ALINEACIÓN Y AJUSTE DE TEXTO
 	// ==========================================
 
-	// -- Encabezados de Sección (A26:G26) --
-	let rangoEncabezado = para_compartir.getRange("A26:G26");
-	rangoEncabezado.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
-	rangoEncabezado.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
-	rangoEncabezado.getFormat().setWrapText(false);
-	rangoEncabezado.getFormat().setTextOrientation(0);
-	rangoEncabezado.merge(false); // Combina celdas para título centrado
-
-	// Reajuste posterior a la izquierda (parece redundante en el original, pero se mantiene la lógica)
-	rangoEncabezado.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
-	rangoEncabezado.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
-	rangoEncabezado.merge(false);
-
-	// -- Encabezados Superiores (A6:G6) --
-	let rangoTituloSup = para_compartir.getRange("A6:G6");
-	rangoTituloSup.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
-	rangoTituloSup.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
-	rangoTituloSup.getFormat().setWrapText(false);
-	rangoTituloSup.merge(false);
+	// -- Encabezados de Sección --
+	// El encabezado ocupa todo el ancho de la tabla pegada.
+	// (Reutilizamos colCount calculado en la sección 2)
+	let rangoEncabezadoCompleto = celdaDestino.getResizedRange(0, colCount - 1);
 	
-	// Reajuste a la izquierda
-	rangoTituloSup.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
+	rangoEncabezadoCompleto.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+	rangoEncabezadoCompleto.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
+	rangoEncabezadoCompleto.getFormat().setWrapText(false);
+	rangoEncabezadoCompleto.getFormat().setTextOrientation(0);
+	rangoEncabezadoCompleto.merge(false); // Combina celdas para título centrado
+
+	// Reajuste posterior a la izquierda
+	rangoEncabezadoCompleto.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
+	rangoEncabezadoCompleto.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
+	rangoEncabezadoCompleto.merge(false);
+
+	// -- Encabezados Superiores (Proyectos) --
+	// NOTA: Este bloque modificaba A6:G6. Como estamos en step7 (Admin), 
+	// esto parece código residual o que afecta a la tabla anterior. 
+	// Lo dejaremos comentado o adaptado si es necesario, pero A6 es fijo para Proyectos.
+	// Si se requiere, se debe manejar en step6 o step9.
 }
 
 // ==========================================================================
@@ -595,7 +578,7 @@ function step7_GenerarHorasAdmin(workbook: ExcelScript.Workbook) {
  * SCRIPT: Generación de Sección "Horas No Laborables"
  * OBJETIVO: Copiar los datos de tiempos no laborables a la hoja de presentación.
  * FUENTE: Hoja "Horas No Laborables", Rango dinámico desde A3 (incluye totales).
- * DESTINO: Hoja "Para compartir", celda A36.
+ * DESTINO: Hoja "Para compartir", posición dinámica después de la tabla anterior.
  */
 function step8_GenerarHorasNoLaborables(workbook: ExcelScript.Workbook) {
 
@@ -606,13 +589,18 @@ function step8_GenerarHorasNoLaborables(workbook: ExcelScript.Workbook) {
 	let horas_No_Laborables = workbook.getWorksheet("Horas No Laborables");
 
 	// Identifica el rango completo de la tabla dinámica automáticamente
-	// getSurroundingRegion() selecciona todo el bloque de datos contiguos desde A3
 	let rangoOrigen = horas_No_Laborables.getRange("A3").getSurroundingRegion();
 
+	// --- LÓGICA DE POSICIONAMIENTO DINÁMICO ---
+	// Buscamos la última fila usada en "Para compartir" para pegar debajo
+	let lastRow = para_compartir.getUsedRange().getLastRow().getRowIndex();
+	// Dejamos 1 fila vacía de separación (lastRow + 2)
+	let targetRowIndex = lastRow + 2;
+	
+	let celdaDestino = para_compartir.getRangeByIndexes(targetRowIndex, 0, 1, 1); // Columna A
+
 	// Copia los datos a la hoja de presentación
-	// Origen: Rango dinámico de "Horas No Laborables"
-	// Destino: A36 de "Para compartir"
-	para_compartir.getRange("A36").copyFrom(
+	celdaDestino.copyFrom(
 		rangoOrigen, 
 		ExcelScript.RangeCopyType.values, 
 		false, 
@@ -626,17 +614,16 @@ function step8_GenerarHorasNoLaborables(workbook: ExcelScript.Workbook) {
 /**
  * SCRIPT: Ajustes de Formato - Parte 1
  * OBJETIVO: Aplicar bordes, alineación y estilos a las tablas de "Proyectos" y "Horas No Laborables".
- * ALCANCE: Rangos A6:G24 (Proyectos) y A26:G34/A36:G36 (Admin/No Laborables).
+ * ALCANCE: Rangos dinámicos detectados por encabezados.
  */
 function step9_Ajustes1(workbook: ExcelScript.Workbook) {
 	let para_compartir = workbook.getWorksheet("Para compartir");
 
 	// ==========================================
-	// 1. FORMATO TABLA PROYECTOS (A6:G24)
+	// 1. FORMATO TABLA PROYECTOS (A6)
 	// ==========================================
-	
-	// -- Bordes --
-	let rangoProyectos = para_compartir.getRange("A6:G24");
+	// Asumimos que Proyectos siempre empieza en A6
+	let rangoProyectos = para_compartir.getRange("A6").getSurroundingRegion();
 	let formatoProyectos = rangoProyectos.getFormat();
 
 	// Limpia diagonales
@@ -671,90 +658,91 @@ function step9_Ajustes1(workbook: ExcelScript.Workbook) {
 
 	// -- Columna A (Nombres) --
 	// Extiende desde A7 hacia abajo para alinear nombres a la izquierda
-	let rangoNombres = para_compartir.getRange("A7").getExtendedRange(ExcelScript.KeyboardDirection.down);
-	rangoNombres.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
-	rangoNombres.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
+	// Usamos el rango detectado para saber hasta dónde llegar
+	let rowCount = rangoProyectos.getRowCount();
+	// A7 es la segunda fila del rango (index 1)
+	if (rowCount > 1) {
+		let rangoNombres = rangoProyectos.getRow(1).getResizedRange(rowCount - 2, 0).getColumn(0);
+		rangoNombres.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
+		rangoNombres.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
+	}
 
 	// ==========================================
-	// 2. FORMATO TABLA HORAS ADMIN (A26:G34)
+	// 2. FORMATO TABLA HORAS ADMIN
 	// ==========================================
+	// Buscamos la tabla de Admin dinámicamente para aplicar alineación
+	let foundAdmin = para_compartir.getRange("A:A").find("Suma de Horas de admin", {
+		completeMatch: false,
+		matchCase: false,
+		searchDirection: ExcelScript.SearchDirection.forward
+	});
+
+	if (foundAdmin) {
+		let rangoAdmin = foundAdmin.getSurroundingRegion();
+		
+		// 1. Alineación General: Centrada (para que los números queden centrados)
+		rangoAdmin.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+		rangoAdmin.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
+		rangoAdmin.getFormat().setWrapText(false);
+
+		// 2. Alineación Columna A: Izquierda (para los textos de las filas y el título)
+		// Seleccionamos la primera columna del rango detectado
+		let colA = rangoAdmin.getColumn(0);
+		colA.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
+	}
+
+	// ==========================================
+	// 3. FORMATO TABLA NO LABORABLES
+	// ==========================================
+	// Buscamos la tabla de No Laborables.
 	
-	// -- Alineación --
-	let rangoAdmin = para_compartir.getRange("A26:G34");
-	rangoAdmin.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
-	rangoAdmin.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center); // Centrado vertical
-	rangoAdmin.getFormat().setWrapText(false);
+	// Estrategia: Buscar "Suma de Horas no laborables" en columna A
+	let foundRange = para_compartir.getRange("A:A").find("Suma de Horas no laborables", {
+		completeMatch: false,
+		matchCase: false,
+		searchDirection: ExcelScript.SearchDirection.forward
+	});
 
-	// -- Bordes --
-	let formatoAdmin = rangoAdmin.getFormat();
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.diagonalDown).setStyle(ExcelScript.BorderLineStyle.none);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.diagonalUp).setStyle(ExcelScript.BorderLineStyle.none);
-	
-	// Bordes externos e internos
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setWeight(ExcelScript.BorderWeight.thin);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setWeight(ExcelScript.BorderWeight.thin);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setWeight(ExcelScript.BorderWeight.thin);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setWeight(ExcelScript.BorderWeight.thin);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setWeight(ExcelScript.BorderWeight.thin);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoAdmin.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setWeight(ExcelScript.BorderWeight.thin);
+    // Intento alternativo si no se encuentra la cabecera exacta (por si cambia el nombre del campo)
+    if (!foundRange) {
+        foundRange = para_compartir.getRange("A:A").find("Horas no laborables", {
+            completeMatch: false,
+            matchCase: false,
+            searchDirection: ExcelScript.SearchDirection.forward
+        });
+    }
 
-	// -- Encabezado (A26:G26) --
-	let rangoEncabezadoAdmin = para_compartir.getRange("A26:G26");
-	rangoEncabezadoAdmin.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
-	rangoEncabezadoAdmin.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
-	rangoEncabezadoAdmin.merge(false);
+	if (foundRange) {
+		let rangoNL = foundRange.getSurroundingRegion();
+		let formatoCuerpoNL = rangoNL.getFormat();
 
-	// -- Nombres (A27:A33) --
-	let rangoNombresAdmin = para_compartir.getRange("A27:A33");
-	rangoNombresAdmin.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
-	rangoNombresAdmin.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
+		// Bordes
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.diagonalDown).setStyle(ExcelScript.BorderLineStyle.none);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.diagonalUp).setStyle(ExcelScript.BorderLineStyle.none);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setWeight(ExcelScript.BorderWeight.thin);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setWeight(ExcelScript.BorderWeight.thin);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setWeight(ExcelScript.BorderWeight.thin);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setWeight(ExcelScript.BorderWeight.thin);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setWeight(ExcelScript.BorderWeight.thin);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setStyle(ExcelScript.BorderLineStyle.continuous);
+		formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setWeight(ExcelScript.BorderWeight.thin);
 
-	// -- Ajuste especial (A27 extendido hacia arriba) --
-	// Esto parece corregir un encabezado o celda específica
-	let rangoEspecial = para_compartir.getRange("A27").getRangeEdge(ExcelScript.KeyboardDirection.up).getRangeEdge(ExcelScript.KeyboardDirection.up);
-	rangoEspecial.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
-	rangoEspecial.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
+		// Alineación
+		formatoCuerpoNL.setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+		formatoCuerpoNL.setVerticalAlignment(ExcelScript.VerticalAlignment.center);
+		formatoCuerpoNL.setWrapText(false);
 
-	// ==========================================
-	// 3. FORMATO TABLA NO LABORABLES (A36:G36 y extensión)
-	// ==========================================
+		// Alineación Columna A: Izquierda (para etiquetas)
+		rangoNL.getColumn(0).getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
 
-	// -- Encabezado (A36:G36) --
-	let rangoEncabezadoNL = para_compartir.getRange("A36:G36");
-	rangoEncabezadoNL.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
-	rangoEncabezadoNL.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.bottom);
-	rangoEncabezadoNL.merge(false);
-
-	// -- Cuerpo (Extendido desde A36:G36 hacia abajo) --
-	let rangoCuerpoNL = para_compartir.getRange("A36:G36").getExtendedRange(ExcelScript.KeyboardDirection.down);
-	let formatoCuerpoNL = rangoCuerpoNL.getFormat();
-
-	// Bordes
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.diagonalDown).setStyle(ExcelScript.BorderLineStyle.none);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.diagonalUp).setStyle(ExcelScript.BorderLineStyle.none);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeLeft).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeTop).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeBottom).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.edgeRight).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setWeight(ExcelScript.BorderWeight.thin);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setStyle(ExcelScript.BorderLineStyle.continuous);
-	formatoCuerpoNL.getRangeBorder(ExcelScript.BorderIndex.insideHorizontal).setWeight(ExcelScript.BorderWeight.thin);
-
-	// Alineación
-	formatoCuerpoNL.setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
-	formatoCuerpoNL.setVerticalAlignment(ExcelScript.VerticalAlignment.center);
-	formatoCuerpoNL.setWrapText(false);
+		// Encabezado alineado a la izquierda
+		foundRange.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
+	}
 }
 
 // ==========================================================================
@@ -823,12 +811,34 @@ function step11_GenerarGranTotal(workbook: ExcelScript.Workbook) {
     if (!sheet) return;
 
     // ==========================================
-    // 1. OBTENER RANGOS DE LAS 3 TABLAS
+    // 1. OBTENER RANGOS DE LAS 3 TABLAS (DINÁMICO)
     // ==========================================
-    // Usamos getSurroundingRegion para detectar dinámicamente el tamaño de cada tabla
+    // Buscamos las tablas por sus encabezados
     let rangoProy = sheet.getRange("A6").getSurroundingRegion();
-    let rangoAdmin = sheet.getRange("A26").getSurroundingRegion();
-    let rangoNL = sheet.getRange("A36").getSurroundingRegion();
+    
+    // Buscar Admin
+    let foundAdmin = sheet.getRange("A:A").find("Suma de Horas de admin", {
+        completeMatch: false, matchCase: false, searchDirection: ExcelScript.SearchDirection.forward
+    });
+    let rangoAdmin = foundAdmin ? foundAdmin.getSurroundingRegion() : null;
+
+    // Buscar No Laborables
+    let foundNL = sheet.getRange("A:A").find("Suma de Horas no laborables", {
+        completeMatch: false, matchCase: false, searchDirection: ExcelScript.SearchDirection.forward
+    });
+
+    if (!foundNL) {
+        foundNL = sheet.getRange("A:A").find("Horas no laborables", {
+            completeMatch: false, matchCase: false, searchDirection: ExcelScript.SearchDirection.forward
+        });
+    }
+
+    let rangoNL = foundNL ? foundNL.getSurroundingRegion() : null;
+
+    if (!rangoAdmin || !rangoNL) {
+        console.log("No se encontraron todas las tablas para el Gran Total");
+        return;
+    }
 
     // ==========================================
     // 2. IDENTIFICAR FILAS DE TOTALES INDIVIDUALES
@@ -849,31 +859,37 @@ function step11_GenerarGranTotal(workbook: ExcelScript.Workbook) {
     let filaGranTotalIndex = indexUltimaFilaTablaNL + 1;
 
     // ==========================================
-    // 4. ESCRIBIR ETIQUETA
-    // ==========================================
-    // Escribimos "Total general" en la columna A de la nueva fila
-    sheet.getRangeByIndexes(filaGranTotalIndex, 0, 1, 1).setValue("Total general");
-
-    // ==========================================
-    // 5. CALCULAR SUMAS POR COLUMNA
+    // 5. CALCULAR SUMAS POR COLUMNA (OPTIMIZADO)
     // ==========================================
     // Asumimos que las 3 tablas tienen la misma estructura de columnas (mismos recursos en mismo orden)
     let columnCount = rangoProy.getColumnCount();
 
+    // Leemos los valores de una sola vez para evitar llamadas en bucle (Optimización de rendimiento)
+    // getValues() devuelve una matriz 2D [fila][columna]. Como es una sola fila, usamos [0].
+    let valoresProy = filaTotalProy.getValues()[0];
+    let valoresAdmin = filaTotalAdmin.getValues()[0];
+    let valoresNL = filaTotalNL.getValues()[0];
+    
+    // Preparamos una matriz para escribir los resultados de una sola vez
+    // Inicializamos con la etiqueta "Total general" para la columna 0
+    let valoresGranTotal: (string | number | boolean)[] = ["Total general"];
+
     // Iteramos desde la columna 1 (B) hasta la última columna de datos
-    // La columna 0 es la de etiquetas ("Total general"), por eso empezamos en 1
     for (let col = 1; col < columnCount; col++) {
-        // Obtenemos los valores de las celdas de totales de cada tabla
-        let valProy = filaTotalProy.getCell(0, col).getValue() as number;
-        let valAdmin = filaTotalAdmin.getCell(0, col).getValue() as number;
-        let valNL = filaTotalNL.getCell(0, col).getValue() as number;
+        // Obtenemos los valores de los arrays leídos previamente
+        let valProy = valoresProy[col] as number;
+        let valAdmin = valoresAdmin[col] as number;
+        let valNL = valoresNL[col] as number;
 
         // Sumamos los valores, tratando nulos/undefined como 0
         let suma = (valProy || 0) + (valAdmin || 0) + (valNL || 0);
-
-        // Escribimos el resultado en la fila del Gran Total
-        sheet.getRangeByIndexes(filaGranTotalIndex, col, 1, 1).setValue(suma);
+        
+        valoresGranTotal.push(suma);
     }
+    
+    // Escribimos toda la fila de una vez
+    // El rango destino empieza en filaGranTotalIndex, columna 0, 1 fila, columnCount columnas
+    sheet.getRangeByIndexes(filaGranTotalIndex, 0, 1, columnCount).setValues([valoresGranTotal]);
 }
 
 // ==========================================================================
@@ -898,55 +914,67 @@ function step12_EstilosFinales(workbook: ExcelScript.Workbook) {
 	const colorAzul = "#C0E6F5";
 
 	// ==========================================
-	// 2. FORMATO DE ENCABEZADOS (RANGOS FIJOS)
+	// 2. FORMATO DE ENCABEZADOS Y TOTALES (DINÁMICO)
 	// ==========================================
 	
-	// -- Tabla Proyectos (A6:G7) --
-	let rangoEncabezadoProy = selectedSheet.getRange("A6:G7");
-	rangoEncabezadoProy.getFormat().getFont().setBold(true);
-	rangoEncabezadoProy.getFormat().getFill().setColor(colorAzul);
+	// --- Función auxiliar para aplicar estilos a una tabla dada su cabecera ---
+	function aplicarEstilosTabla(textoCabecera: string) {
+		let found = selectedSheet.getRange("A:A").find(textoCabecera, {
+			completeMatch: false, matchCase: false, searchDirection: ExcelScript.SearchDirection.forward
+		});
 
-	// -- Tabla Admin (A26:G27) --
-	let rangoEncabezadoAdmin = selectedSheet.getRange("A26:G27");
-	rangoEncabezadoAdmin.getFormat().getFont().setBold(true);
-	rangoEncabezadoAdmin.getFormat().getFill().setColor(colorAzul);
+		// Fallback: Si no encuentra "Suma de X", busca solo "X"
+		if (!found && textoCabecera.indexOf("Suma de ") === 0) {
+			let textoCorto = textoCabecera.replace("Suma de ", "");
+			found = selectedSheet.getRange("A:A").find(textoCorto, {
+				completeMatch: false, matchCase: false, searchDirection: ExcelScript.SearchDirection.forward
+			});
+		}
+		
+		if (found) {
+			// ESTRATEGIA ROBUSTA: Usar la fila de encabezados de columna (fila siguiente)
+			// para determinar el tamaño real de la tabla, ya que la fila de título puede tener huecos.
+			let filaEncabezados = found.getOffsetRange(1, 0); // Baja 1 fila
+			let regionDatos = filaEncabezados.getSurroundingRegion();
+			let numColumnas = regionDatos.getColumnCount();
+			
+			// 1. UNIR Y ETIQUETAR ENCABEZADO SUPERIOR (Columnas B hasta el final)
+			// Rango objetivo: Desde B(fila título) hasta la última columna
+			// getResizedRange(0, numColumnas - 2) expande desde la columna B
+			let rangoEncabezadoSuperior = found.getOffsetRange(0, 1).getResizedRange(0, numColumnas - 2);
+			
+			// Limpiamos merges previos para evitar conflictos y unimos
+			rangoEncabezadoSuperior.unmerge();
+			rangoEncabezadoSuperior.getCell(0, 0).setValue("Etiquetas de columna");
+			rangoEncabezadoSuperior.merge(false);
+			
+			// Alineación centrada
+			rangoEncabezadoSuperior.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+			rangoEncabezadoSuperior.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
 
-	// -- Tabla No Laborables (A36:G37) --
-	let rangoEncabezadoNL = selectedSheet.getRange("A36:G37");
-	rangoEncabezadoNL.getFormat().getFont().setBold(true);
-	rangoEncabezadoNL.getFormat().getFill().setColor(colorAzul);
+			// 2. ESTILOS DE COLOR Y FUENTE
+			// Aplicamos a las dos filas superiores (Título y Encabezados)
+			// Usamos resize desde found para cubrir todo el ancho
+			let rangoTitulo = found.getResizedRange(0, numColumnas - 1); // Fila 1 (A..Final)
+			let rangoSubtitulos = filaEncabezados.getResizedRange(0, numColumnas - 1); // Fila 2 (A..Final)
+			
+			rangoTitulo.getFormat().getFont().setBold(true);
+			rangoTitulo.getFormat().getFill().setColor(colorAzul);
+			
+			rangoSubtitulos.getFormat().getFont().setBold(true);
+			rangoSubtitulos.getFormat().getFill().setColor(colorAzul);
 
-	// ==========================================
-	// 3. FORMATO DE TOTALES (RANGOS DINÁMICOS)
-	// ==========================================
-	// Busca la última fila de cada bloque y aplica formato
+			// 3. ESTILOS DE TOTALES (Última fila de la región detectada)
+			let rangoTotal = regionDatos.getLastRow();
+			rangoTotal.getFormat().getFill().setColor(colorAzul);
+			rangoTotal.getFormat().getFont().setBold(true);
+		}
+	}
 
-	// -- Total Proyectos --
-	// Desde A6, baja hasta el final del bloque y selecciona esa fila completa hacia la derecha
-	let rangoTotalProy = selectedSheet.getRange("A6")
-		.getRangeEdge(ExcelScript.KeyboardDirection.down)
-		.getExtendedRange(ExcelScript.KeyboardDirection.right);
-	
-	rangoTotalProy.getFormat().getFill().setColor(colorAzul);
-	rangoTotalProy.getFormat().getFont().setBold(true);
-
-	// -- Total Admin --
-	// Desde A26, baja hasta el final del bloque
-	let rangoTotalAdmin = selectedSheet.getRange("A26")
-		.getRangeEdge(ExcelScript.KeyboardDirection.down)
-		.getExtendedRange(ExcelScript.KeyboardDirection.right);
-
-	rangoTotalAdmin.getFormat().getFill().setColor(colorAzul);
-	rangoTotalAdmin.getFormat().getFont().setBold(true);
-
-	// -- Total No Laborables --
-	// Desde A36, baja hasta el final del bloque
-	let rangoTotalNL = selectedSheet.getRange("A36")
-		.getRangeEdge(ExcelScript.KeyboardDirection.down)
-		.getExtendedRange(ExcelScript.KeyboardDirection.right);
-
-	rangoTotalNL.getFormat().getFill().setColor(colorAzul);
-	rangoTotalNL.getFormat().getFont().setBold(true);
+	// Aplicar a las 3 tablas
+	aplicarEstilosTabla("Suma de Horas del proyecto");
+	aplicarEstilosTabla("Suma de Horas de admin");
+	aplicarEstilosTabla("Suma de Horas no laborables");
 
     // ==========================================
 	// 4. FORMATO GRAN TOTAL (NUEVO)
@@ -968,6 +996,9 @@ function step12_EstilosFinales(workbook: ExcelScript.Workbook) {
 		// 2. Alineación Centrada
 		rangoGranTotal.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
 		rangoGranTotal.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
+
+		// Alineación Izquierda para la etiqueta "Total general"
+		rangoGranTotal.getCell(0, 0).getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.left);
 
 		// 3. Bordes Completos (Caja y divisiones internas)
 		let formatoGT = rangoGranTotal.getFormat();
