@@ -1021,4 +1021,24 @@ function step12_EstilosFinales(workbook: ExcelScript.Workbook) {
 		// Bordes internos verticales (para separar columnas)
 		formatoGT.getRangeBorder(ExcelScript.BorderIndex.insideVertical).setStyle(ExcelScript.BorderLineStyle.continuous);
 	}
+
+	// ==========================================
+	// 5. FORMATO TITULOS PRINCIPALES (A1:A4)
+	// ==========================================
+	// Ajustar los títulos para que abarquen todo el ancho de la tabla y estén centrados.
+	
+	// Usamos la tabla de Proyectos (A6) como referencia del ancho total
+	let rangoRef = selectedSheet.getRange("A6").getSurroundingRegion();
+	let totalColumnas = rangoRef.getColumnCount();
+
+	// Seleccionamos el rango de las 4 primeras filas con el ancho de la tabla
+	// getRangeByIndexes(filaInicial, colInicial, numFilas, numColumnas)
+	let rangoTitulos = selectedSheet.getRangeByIndexes(0, 0, 4, totalColumnas);
+	
+	// Fusionamos horizontalmente (across = true) para mantener las 4 filas separadas pero unidas a lo ancho
+	rangoTitulos.merge(true);
+	
+	// Alineamos al centro
+	rangoTitulos.getFormat().setHorizontalAlignment(ExcelScript.HorizontalAlignment.center);
+	rangoTitulos.getFormat().setVerticalAlignment(ExcelScript.VerticalAlignment.center);
 }
